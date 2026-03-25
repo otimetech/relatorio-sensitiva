@@ -1,8 +1,9 @@
+import React from 'react';
 import { useParams, useSearchParams } from "react-router-dom";
 import ReportHeader from "@/components/ReportHeader";
 import ReportFooter from "@/components/ReportFooter";
 import { useRelatorio, RelatorioResponse } from "@/hooks/useRelatorio";
-import { UltrasomItem } from "@/types/vibracao";
+import { SensitivaItem, UltrasomItem } from "@/types/vibracao";
 
 const Index = () => {
   const { idRelatorio: paramId } = useParams<{
@@ -21,10 +22,22 @@ const Index = () => {
 
   // Normalizar dados para suportar tanto vibracao quanto ultrassom
   const normalizeRelatorio = (response: RelatorioResponse) => {
-    const relatorio = response.relatorio as any;
-    // Se tem array ultrassom, normalize para vibracoes
-    if (relatorio.ultrassom && !relatorio.vibracoes) {
-      relatorio.vibracoes = relatorio.ultrassom.map((item: UltrasomItem) => ({
+    const responseData = response as any;
+    const baseRelatorio = response.relatorio as any;
+
+    const relatorio = {
+      ...baseRelatorio,
+      cliente: baseRelatorio.cliente ?? responseData.cliente,
+      executor: baseRelatorio.executor ?? baseRelatorio.usuario ?? responseData.usuario,
+      aprovador: baseRelatorio.aprovador ?? responseData.aprovador,
+      dataExe: baseRelatorio.dataExe ?? baseRelatorio.data_execucao ?? baseRelatorio.dataExecucao,
+      num_revisao: baseRelatorio.num_revisao ?? baseRelatorio.revisao,
+      n_relatorio: baseRelatorio.n_relatorio ?? baseRelatorio.numero,
+    } as any;
+
+    // Se tem array ultrassom, normaliza para vibracoes
+    if (Array.isArray(baseRelatorio.ultrassom) && !Array.isArray(baseRelatorio.vibracoes)) {
+      relatorio.vibracoes = baseRelatorio.ultrassom.map((item: UltrasomItem) => ({
         id: item.id || 0,
         foto: item.foto_painel || item.foto1 || item.foto,
         foto2: item.foto_camera || item.foto2,
@@ -45,6 +58,33 @@ const Index = () => {
         data_exe: relatorio.dataExe
       }));
     }
+
+    // Se tem array sensitivas, também normaliza para vibracoes
+    if (Array.isArray(responseData.sensitivas) && !Array.isArray(relatorio.vibracoes)) {
+      relatorio.vibracoes = responseData.sensitivas.map((item: SensitivaItem) => {
+        const fotos = Array.isArray(item.fotos) ? item.fotos : [];
+        const checklist = Array.isArray(item.checklist) ? item.checklist : [];
+        const checklistNok = checklist.filter((entry) => entry.situacao?.toUpperCase() === "NOK");
+
+        return {
+          id: item.id || 0,
+          foto: fotos[0]?.url || null,
+          foto2: fotos[1]?.url || null,
+          fotos,
+          checklist,
+          setor: item.area || "-",
+          area: item.area || "-",
+          localizacao: item.equipamento || "-",
+          local: item.equipamento || "-",
+          componente: item.tag || "-",
+          num_vazamento: item.tag || "-",
+          status: checklistNok.length > 0 ? "NOK" : "OK",
+          st3: checklistNok.length > 0 ? "NOK" : "OK",
+          data_exe: relatorio.dataExe,
+        };
+      });
+    }
+
     return relatorio;
   };
 
@@ -161,7 +201,7 @@ const Index = () => {
             </div>
 
             <div className="mb-8 flex justify-center items-center">
-              <img src="/vibracao-cover.jpg" alt="Imagem de Análise de Ultrassom" className="cover-image rounded-lg" style={{ width: "160px", height: "120px", objectFit: "cover" }} />
+              <img src="/logo-sensitiva.jpg" alt="Imagem de Manutenção Sensitiva" className="cover-image rounded-lg" style={{ width: "160px", height: "120px", objectFit: "cover" }} />
             </div>
 
             {clienteData?.logo && <div className="mb-8">
@@ -213,9 +253,20 @@ const Index = () => {
               Relatório Nº <strong>{`${relatorio.id} ${relatorio.num_revisao ?? ""}`.trim()}</strong>.
               <br />
               < br/>
-                O princípio do trabalho visa diagnosticar por intermédio do instrumento Digital ultrassonico
-              com indicação em tela LCD, os pontos com vazamento, e o quanto está sendo desperdiçado
-              em termos de vazão de energia, e o quanto representa financeiramente os desperdícios.
+              
+                <p>A inspeção sensitiva de multiparametro tem por finalidade avaliar a condição geral 
+              dos equipamentos monitorados, avaliando:</p>
+              <br></br>
+              <p>1) Vazamento de óleo no sistema hidráulico</p>
+              <p>2) Vazamento de óleo de corte (Coolant)</p>
+              <p>3) Ruído anormal no equipamento</p>
+              <p>4) Fixação dos motores</p>
+              <p>5) Transmissão (Acoplamento e Correias)</p>
+              <p>6) Vazamento de ar comprimido</p>
+              <p>7) Chave de segurança do equipamento</p>
+              <p>8) Cortina de Segurança</p>
+              <p>9) Coluna luminosa “Sinaleiro”</p>
+              <p>10) Painéis operacionais (botões e lâmpadas)</p>
             </p>
           </div>
 
@@ -328,84 +379,139 @@ const Index = () => {
 
         {/* Vazamentos - 1 por pagina */}
         {relatorio.vibracoes && relatorio.vibracoes.length > 0 ? (
-          relatorio.vibracoes.map((item, index) => (
-            <div key={item.id || index} className="report-page print-break flex flex-col">
-              <div className="flex-1">
-                <ReportHeader />
+          relatorio.vibracoes.map((item, index) => {
+            const fotos = Array.isArray(item.fotos) ? item.fotos : [];
+            const fotosPage1 = fotos.slice(0, 4);
+            const fotosRestantes = fotos.slice(4);
+            const fotoPageChunks: any[][] = [];
+            for (let i = 0; i < fotosRestantes.length; i += 4) {
+              fotoPageChunks.push(fotosRestantes.slice(i, i + 4));
+            }
+            return (
+              <React.Fragment key={item.id || index}>
+                <div className="report-page print-break flex flex-col">
+                  <div className="flex-1">
+                    <ReportHeader />
 
-                <h2 className="report-title">REGISTRO DE VAZAMENTO {index + 1}</h2>
+                    <h2 className="report-title">DADOS DO EQUIPAMENTO {index + 1}</h2>
 
-                <div className="overflow-x-auto mb-6">
-                  <table className="w-full border-collapse text-sm">
-                    <thead>
-                      <tr className="bg-primary text-primary-foreground">
-                        <th className="border border-gray-300 p-2 text-left">#</th>
-                        <th className="border border-gray-300 p-2 text-left">Setor</th>
-                        <th className="border border-gray-300 p-2 text-left">Nº lacre</th>
-                        <th className="border border-gray-300 p-2 text-left">Localização</th>
-                        <th className="border border-gray-300 p-2 text-left">Componente</th>
-                        <th className="border border-gray-300 p-2 text-left">Valor medido</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr className="hover:bg-secondary/50">
-                        <td className="border border-gray-300 p-2">{index + 1}</td>
-                        <td className="border border-gray-300 p-2">{item.setor || item.area || "-"}</td>
-                        <td className="border border-gray-300 p-2">{item.num_vazamento || "-"}</td>
-                        <td className="border border-gray-300 p-2">{item.localizacao || item.local || "-"}</td>
-                        <td className="border border-gray-300 p-2">{item.componente || "-"}</td>
-                        <td className="border border-gray-300 p-2">{item.valor_medido || "-"}</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                    <div className="overflow-x-auto mb-6">
+                      <table className="w-full border-collapse text-sm">
+                        <thead>
+                          <tr className="bg-primary text-primary-foreground">
+                            <th className="border border-gray-300 p-2 text-left">#</th>
+                            <th className="border border-gray-300 p-2 text-left">Área</th>
+                            <th className="border border-gray-300 p-2 text-left">TAG</th>
+                            <th className="border border-gray-300 p-2 text-left">Equipamento</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="hover:bg-secondary/50">
+                            <td className="border border-gray-300 p-2">{index + 1}</td>
+                            <td className="border border-gray-300 p-2">{item.setor || item.area || "-"}</td>
+                            <td className="border border-gray-300 p-2">{item.num_vazamento || "-"}</td>
+                            <td className="border border-gray-300 p-2">{item.localizacao || item.local || "-"}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Checklist table */}
+                    <h2 className="report-title">ITENS INSPECIONADOS</h2>
+                    {item.checklist && item.checklist.length > 0 && (
+                      <div className="overflow-x-auto mb-6">
+                        <table className="w-full border-collapse text-sm">
+                          <thead>
+                            <tr className="bg-gray-200 text-gray-800">
+                              <th className="border border-gray-400 p-1 text-center w-6">#</th>
+                              <th className="border border-gray-400 p-1 text-left">INSPEÇÃO</th>
+                              <th className="border border-gray-400 p-1 text-center w-14" style={{backgroundColor: '#00b050', color: '#fff'}}>OK</th>
+                              <th className="border border-gray-400 p-1 text-center w-14" style={{backgroundColor: '#ffff00', color: '#000'}}>FORA</th>
+                              <th className="border border-gray-400 p-1 text-left">OBS.:</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {item.checklist.map((entry: any, ci: number) => {
+                              const isOk = entry.situacao?.toUpperCase() === "OK";
+                              return (
+                                <tr key={entry.id ?? ci} className="text-xs">
+                                  <td className="border border-gray-400 p-1 text-center">{ci + 1}</td>
+                                  <td className="border border-gray-400 p-1">{entry.descricao}</td>
+                                  <td className="border border-gray-400 p-1 text-center" style={isOk ? {backgroundColor: '#00b050'} : {}}>
+                                    {isOk ? '✓' : ''}
+                                  </td>
+                                  <td className="border border-gray-400 p-1 text-center" style={!isOk ? {backgroundColor: '#ffff00'} : {}}>
+                                    {!isOk ? '✓' : ''}
+                                  </td>
+                                  <td className="border border-gray-400 p-1">{entry.observacao || ''}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {/* Primeiras 4 fotos na página principal */}
+                    {fotosPage1.length > 0 && (
+                      <div className="grid grid-cols-4 gap-2">
+                        {fotosPage1.map((foto: any, fi: number) => (
+                          <div key={foto.id ?? fi} className="border border-gray-300 rounded-lg overflow-hidden">
+                            <p className="vazamento-photo-title">Foto {fi + 1}</p>
+                            <div className="vazamento-photo-body">
+                              <img
+                                src={foto.url}
+                                alt={`Foto ${fi + 1} - ${item.localizacao || item.local}`}
+                                className="vazamento-photo"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <ReportFooter />
                 </div>
 
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="border border-gray-300 rounded-lg overflow-hidden">
-                    <p className="vazamento-photo-title">Foto Equipamento</p>
-                    <div className="vazamento-photo-body">
-                      {item.foto ? (
-                        <img
-                          src={item.foto}
-                          alt={`Foto 1 - ${item.localizacao || item.local}`}
-                          className="vazamento-photo"
-                        />
-                      ) : (
-                        <div className="image-placeholder h-full w-full">
-                          <span className="text-xs text-muted-foreground">Sem foto 1</span>
+                {/* Páginas extras de fotos */}
+                {fotoPageChunks.map((chunk, chunkIndex) => {
+                  const startNum = fotosPage1.length + chunkIndex * 4 + 1;
+                  return (
+                    <div key={`fotos-${index}-${chunkIndex}`} className="report-page print-break flex flex-col">
+                      <div className="flex-1">
+                        <ReportHeader />
+                        <h2 className="report-title">DADOS DO EQUIPAMENTO {index + 1} - Fotos (continuação)</h2>
+                        <div className="grid grid-cols-4 gap-2">
+                          {chunk.map((foto: any, fi: number) => {
+                            const fotoNum = startNum + fi;
+                            return (
+                              <div key={foto.id ?? fi} className="border border-gray-300 rounded-lg overflow-hidden">
+                                <p className="vazamento-photo-title">Foto {fotoNum}</p>
+                                <div className="vazamento-photo-body">
+                                  <img
+                                    src={foto.url}
+                                    alt={`Foto ${fotoNum} - ${item.localizacao || item.local}`}
+                                    className="vazamento-photo"
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                      )}
+                      </div>
+                      <ReportFooter />
                     </div>
-                    <p className="vazamento-photo-caption">Foto 1</p>
-                  </div>
-                  <div className="border border-gray-300 rounded-lg overflow-hidden">
-                    <p className="vazamento-photo-title">Foto Equipamento</p>
-                    <div className="vazamento-photo-body">
-                      {item.foto2 ? (
-                        <img
-                          src={item.foto2}
-                          alt={`Foto 2 - ${item.localizacao || item.local}`}
-                          className="vazamento-photo"
-                        />
-                      ) : (
-                        <div className="image-placeholder h-full w-full">
-                          <span className="text-xs text-muted-foreground">Sem foto 2</span>
-                        </div>
-                      )}
-                    </div>
-                    <p className="vazamento-photo-caption">Foto 2</p>
-                  </div>
-                </div>
-              </div>
-
-              <ReportFooter />
-            </div>
-          ))
+                  );
+                })}
+              </React.Fragment>
+            );
+          })
         ) : (
           <div className="report-page print-break flex flex-col">
             <div className="flex-1">
               <ReportHeader />
-              <h2 className="report-title">REGISTRO DE VAZAMENTO</h2>
+              <h2 className="report-title">RELATÓRIO DE MANUTENÇÃO</h2>
               <div className="border border-gray-300 p-4 text-center text-muted-foreground">
                 Nenhum equipamento registrado
               </div>
@@ -424,18 +530,10 @@ const Index = () => {
           <div className="bg-secondary/30 rounded-lg p-6 mb-8">
             <p className="text-foreground leading-relaxed mb-4">
                 <p>Sugestões: </p>
-                <p> 1) Recuperar os desperdícios causados pelos pontos de vazamento, elaborando um 
-                planejamento de manutenção com a máxima urgência. </p>
-                <p>2) Consertar unidades de conservação do Ar Comprimido (Sistema de Lubrifil / 
-                Reguladores de Pressão) e manômetros que estejam danificados. </p>
-                <p>3) Sugerimos que os Operadores das Máquinas, após a jornada de trabalho procurem 
-                fechar os registros gerais de cada máquina, como fator de economia 
-                (PROCEDIMENTOS). </p>
-                <p>4) Sugerimos que os Compressores de ar sejam medidos para se diagnosticar a 
-                Performance / Rendimento real. </p>
-                <p>5) A eficiência de um “layout” correto na rede de distribuição de ar comprimido principal e 
-                secundário, poderá contribuir muito para a redução do consumo de energia associado a 
-                perda de carga (queda de pressão). ..</p>
+                <p> 1) Solucionar os desvios encontrados para garantir a confiabilidade do equipamento. </p>
+                <p>2) Avaliar se há necessidade de implementar ou revisar o plano de manutenção</p>
+                <p>3) Analisar os comentários deixado no campo observação de cada equipamento. </p>
+                
             </p>
             <p className="text-primary font-semibold">
               Muito obrigado pela confiança.

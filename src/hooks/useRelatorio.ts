@@ -1,11 +1,36 @@
 import { useQuery } from "@tanstack/react-query";
-import { VibracaoRelatorioResponse, UltrasomRelatorioResponse } from "@/types/vibracao";
+import {
+  SensitivaRelatorioResponse,
+  VibracaoRelatorioResponse,
+  UltrasomRelatorioResponse,
+} from "@/types/vibracao";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
-export type RelatorioResponse = VibracaoRelatorioResponse | UltrasomRelatorioResponse;
+export type RelatorioResponse =
+  | SensitivaRelatorioResponse
+  | VibracaoRelatorioResponse
+  | UltrasomRelatorioResponse;
 
 export const fetchRelatorio = async (idRelatorio: string): Promise<RelatorioResponse> => {
+  // Primeiro tenta a rota de Sensitiva
+  try {
+    const sensitivaUrl = `${API_BASE_URL}/get-relatorio-sensitiva?id_relatorio=${idRelatorio}`;
+    const response = await fetch(sensitivaUrl);
+
+    if (response.ok) {
+      const contentType = response.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const data: SensitivaRelatorioResponse = await response.json();
+        if (data.relatorio && Array.isArray(data.sensitivas)) {
+          return data;
+        }
+      }
+    }
+  } catch (error) {
+    console.warn("Erro ao buscar Sensitiva, tentando Ultrassom...", error);
+  }
+
   // Tentar buscar dados de Ultrassom primeiro
   try {
     const ultrasomUrl = `${API_BASE_URL}/get-relatorio-ultrassom?id_relatorio=${idRelatorio}`;

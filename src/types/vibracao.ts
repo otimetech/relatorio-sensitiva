@@ -144,6 +144,48 @@ export interface UltrasomRelatorioResponse {
   relatorio: UltrasomRelatorio;
 }
 
+export interface SensitivaFoto {
+  id: number;
+  url: string;
+  created_at: string;
+}
+
+export interface SensitivaChecklistItem {
+  id: number;
+  descricao: string;
+  situacao: string;
+  observacao: string;
+  created_at: string;
+}
+
+export interface SensitivaItem {
+  id: number;
+  equipamento: string;
+  area: string;
+  tag: string;
+  fotos: SensitivaFoto[];
+  checklist: SensitivaChecklistItem[];
+}
+
+export interface SensitivaRelatorio {
+  id: number;
+  numero: string | null;
+  tipo: string;
+  status: string;
+  dataExecucao: string;
+  tipoVazamento: string | null;
+  revisao: string | null;
+  created_at: string;
+}
+
+export interface SensitivaRelatorioResponse {
+  relatorio: SensitivaRelatorio;
+  cliente?: UltrasomCliente;
+  usuario?: VibracaoUsuario;
+  aprovador?: VibracaoUsuario | null;
+  sensitivas: SensitivaItem[];
+}
+
 export interface SeverityLevel {
   range: string;
   classification: string;

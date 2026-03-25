@@ -25,6 +25,25 @@ export interface Usuario {
   foto_assinatura: string | null;
 }
 
+export interface ResmoArComprimidoTabela {
+  mm_furo: number;
+  kw: number;
+  qtd: number;
+  total_kwh: number;
+}
+
+export interface ResumoArComprimido {
+  tabela: ResmoArComprimidoTabela[];
+  total_kwh: number;
+  valor_kwh: number;
+  horas_mes: number;
+  horas_ano: number;
+  kwh_mes: number;
+  kwh_ano: number;
+  custo_mes: number;
+  custo_ano: number;
+}
+
 export interface Relatorio {
   id: number;
   created_at: string;
@@ -36,6 +55,7 @@ export interface Relatorio {
   id_user: number;
   id_user_aprovador?: number;
   tipoVazamento: string | null;
+  resumo_ar_comprimido?: ResumoArComprimido;
   cliente?: Cliente;
   usuario?: Usuario;
   aprovador?: Usuario;

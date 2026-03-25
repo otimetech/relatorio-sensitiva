@@ -381,11 +381,11 @@ const Index = () => {
         {relatorio.vibracoes && relatorio.vibracoes.length > 0 ? (
           relatorio.vibracoes.map((item, index) => {
             const fotos = Array.isArray(item.fotos) ? item.fotos : [];
-            const fotosPage1 = fotos.slice(0, 4);
-            const fotosRestantes = fotos.slice(4);
+            const fotosPage1 = fotos.slice(0, 3);
+            const fotosRestantes = fotos.slice(3);
             const fotoPageChunks: any[][] = [];
-            for (let i = 0; i < fotosRestantes.length; i += 4) {
-              fotoPageChunks.push(fotosRestantes.slice(i, i + 4));
+            for (let i = 0; i < fotosRestantes.length; i += 3) {
+              fotoPageChunks.push(fotosRestantes.slice(i, i + 3));
             }
             return (
               <React.Fragment key={item.id || index}>
@@ -452,9 +452,9 @@ const Index = () => {
                       </div>
                     )}
 
-                    {/* Primeiras 4 fotos na página principal */}
+                    {/* Primeiras 3 fotos na página principal */}
                     {fotosPage1.length > 0 && (
-                      <div className="grid grid-cols-4 gap-2">
+                      <div className="grid grid-cols-3 gap-2">
                         {fotosPage1.map((foto: any, fi: number) => (
                           <div key={foto.id ?? fi} className="border border-gray-300 rounded-lg overflow-hidden">
                             <p className="vazamento-photo-title">Foto {fi + 1}</p>
@@ -476,13 +476,13 @@ const Index = () => {
 
                 {/* Páginas extras de fotos */}
                 {fotoPageChunks.map((chunk, chunkIndex) => {
-                  const startNum = fotosPage1.length + chunkIndex * 4 + 1;
+                  const startNum = fotosPage1.length + chunkIndex * 3 + 1;
                   return (
                     <div key={`fotos-${index}-${chunkIndex}`} className="report-page print-break flex flex-col">
                       <div className="flex-1">
                         <ReportHeader />
                         <h2 className="report-title">DADOS DO EQUIPAMENTO {index + 1} - Fotos (continuação)</h2>
-                        <div className="grid grid-cols-4 gap-2">
+                        <div className="grid grid-cols-3 gap-2">
                           {chunk.map((foto: any, fi: number) => {
                             const fotoNum = startNum + fi;
                             return (

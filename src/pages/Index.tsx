@@ -94,7 +94,7 @@ const Index = () => {
   if (!idRelatorio) {
     return <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center max-w-md">
-          <h1 className="text-2xl font-bold text-primary mb-4">Relatório de Ultrassom</h1>
+          <h1 className="text-2xl font-bold text-primary mb-4">Relatório Manutenção Sensitiva</h1>
           <p className="text-muted-foreground mb-6">
             Informe o ID do relatório na URL para visualizar os dados.
           </p>

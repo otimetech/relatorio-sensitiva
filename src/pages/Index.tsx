@@ -196,12 +196,12 @@ const Index = () => {
 
             <div className="bg-primary text-primary-foreground py-4 px-6 rounded-lg mb-8">
               <h2 className="text-2xl font-bold">RELATÓRIO DE MANUTENÇÃO PREDITIVA</h2>
-              <p className="text-lg mt-2">REF. INSPEÇÃO ANÁLISE POR ULTRASSOM</p>
+              <p className="text-lg mt-2">REF. MANUTENÇÃO SENSITIVA</p>
               <p className="text-sm mt-2 opacity-80">Nº {`${relatorio.id} ${relatorio.num_revisao ?? ""}`.trim()}</p>
             </div>
 
             <div className="mb-8 flex justify-center items-center">
-              <img src="/logo-sensitiva.jpg" alt="Imagem de Manutenção Sensitiva" className="cover-image rounded-lg" style={{ width: "160px", height: "120px", objectFit: "cover" }} />
+              <img src="/logo-sensitiva.jpg" alt="Imagem de Manutenção Sensitiva" className="cover-image rounded-lg" style={{ width: "160px", height: "160px", objectFit: "cover" }} />
             </div>
 
             {clienteData?.logo && <div className="mb-8">

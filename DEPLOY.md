@@ -29,7 +29,10 @@ npm run preview
 3. Adicione a variável:
    - Nome: `VITE_API_URL`
    - Valor: URL completa da sua API
-4. Salve e faça o redeploy
+4. Garanta que a variável esteja disponível durante o **build** do frontend, porque variáveis `VITE_*` são embutidas na compilação
+5. Salve e faça o redeploy
+
+Se `VITE_API_URL` não for informada e o Coolify não tiver proxy para `/api`, o frontend pode receber o `index.html` no lugar do JSON da API. O projeto agora tenta um fallback direto para a URL da Edge Function, mas o ideal continua sendo configurar `VITE_API_URL` corretamente no ambiente de build.
 
 ### Configurações de Build
 

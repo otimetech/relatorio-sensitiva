@@ -5,7 +5,57 @@ import {
   UltrasomRelatorioResponse,
 } from "@/types/vibracao";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
+const DEFAULT_API_BASE_URL = "https://ayfkjjdgrbymmlkuzbig.supabase.co/functions/v1";
+
+const normalizeBaseUrl = (baseUrl: string) => baseUrl.replace(/\/+$/, "");
+
+const API_BASE_URLS = Array.from(
+  new Set(
+    [import.meta.env.VITE_API_URL, "/api", DEFAULT_API_BASE_URL]
+      .filter((baseUrl): baseUrl is string => Boolean(baseUrl))
+      .map(normalizeBaseUrl),
+  ),
+);
+
+const buildEndpointUrl = (baseUrl: string, endpoint: string, idRelatorio: string) => {
+  const url = new URL(`${normalizeBaseUrl(baseUrl)}${endpoint}`, window.location.origin);
+  url.searchParams.set("id_relatorio", idRelatorio);
+  return url.toString();
+};
+
+const fetchJsonFromCandidates = async <T>(
+  endpoint: string,
+  idRelatorio: string,
+  isValidResponse: (data: T) => boolean,
+): Promise<T | null> => {
+  for (const baseUrl of API_BASE_URLS) {
+    try {
+      const response = await fetch(buildEndpointUrl(baseUrl, endpoint, idRelatorio), {
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        continue;
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        continue;
+      }
+
+      const data = (await response.json()) as T;
+      if (isValidResponse(data)) {
+        return data;
+      }
+    } catch (error) {
+      console.warn(`Erro ao buscar ${endpoint} em ${baseUrl}`, error);
+    }
+  }
+
+  return null;
+};
 
 export type RelatorioResponse =
   | SensitivaRelatorioResponse
@@ -13,63 +63,36 @@ export type RelatorioResponse =
   | UltrasomRelatorioResponse;
 
 export const fetchRelatorio = async (idRelatorio: string): Promise<RelatorioResponse> => {
-  // Primeiro tenta a rota de Sensitiva
-  try {
-    const sensitivaUrl = `${API_BASE_URL}/get-relatorio-sensitiva?id_relatorio=${idRelatorio}`;
-    const response = await fetch(sensitivaUrl);
-
-    if (response.ok) {
-      const contentType = response.headers.get("content-type") || "";
-      if (contentType.includes("application/json")) {
-        const data: SensitivaRelatorioResponse = await response.json();
-        if (data.relatorio && Array.isArray(data.sensitivas)) {
-          return data;
-        }
-      }
-    }
-  } catch (error) {
-    console.warn("Erro ao buscar Sensitiva, tentando Ultrassom...", error);
+  const sensitivaData = await fetchJsonFromCandidates<SensitivaRelatorioResponse>(
+    "/get-relatorio-sensitiva",
+    idRelatorio,
+    (data) => Boolean(data.relatorio) && Array.isArray(data.sensitivas),
+  );
+  if (sensitivaData) {
+    return sensitivaData;
   }
 
-  // Tentar buscar dados de Ultrassom primeiro
-  try {
-    const ultrasomUrl = `${API_BASE_URL}/get-relatorio-ultrassom?id_relatorio=${idRelatorio}`;
-    const response = await fetch(ultrasomUrl);
-    
-    if (response.ok) {
-      const contentType = response.headers.get("content-type") || "";
-      if (contentType.includes("application/json")) {
-        const data: UltrasomRelatorioResponse = await response.json();
-        // Se a resposta tem a estrutura de ultrassom, retorna
-        if (data.relatorio && data.relatorio.ultrassom) {
-          return data;
-        }
-      }
-    }
-  } catch (error) {
-    console.warn("Erro ao buscar Ultrassom, tentando Vibracao...", error);
+  const ultrasomData = await fetchJsonFromCandidates<UltrasomRelatorioResponse>(
+    "/get-relatorio-ultrassom",
+    idRelatorio,
+    (data) => Boolean(data.relatorio?.ultrassom),
+  );
+  if (ultrasomData) {
+    return ultrasomData;
   }
 
-  // Fallback para Vibracao
-  const vibracaoUrl = `${API_BASE_URL}/get-vibracao?id_relatorio=${idRelatorio}`;
-  const response = await fetch(vibracaoUrl);
-  
-  if (!response.ok) {
-    throw new Error(`Erro ao buscar relatório: ${response.status}`);
+  const vibracaoData = await fetchJsonFromCandidates<VibracaoRelatorioResponse>(
+    "/get-vibracao",
+    idRelatorio,
+    (data) => Boolean(data.success),
+  );
+  if (vibracaoData) {
+    return vibracaoData;
   }
 
-  const contentType = response.headers.get("content-type") || "";
-  if (!contentType.includes("application/json")) {
-    const bodyText = await response.text();
-    throw new Error(`Resposta inesperada da API: ${bodyText.slice(0, 120)}`);
-  }
-
-  const data: VibracaoRelatorioResponse = await response.json();
-  if (!data.success) {
-    throw new Error("Erro ao buscar relatório: resposta inválida");
-  }
-
-  return data;
+  throw new Error(
+    "Nao foi possivel carregar o relatorio pela API configurada. No Coolify, defina VITE_API_URL no build ou publique um proxy para /api.",
+  );
 };
 
 export const useRelatorio = (idRelatorio: string | null) => {

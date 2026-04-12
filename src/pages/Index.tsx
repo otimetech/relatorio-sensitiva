@@ -2,6 +2,7 @@ import React from 'react';
 import { useParams, useSearchParams } from "react-router-dom";
 import ReportHeader from "@/components/ReportHeader";
 import ReportFooter from "@/components/ReportFooter";
+import ReportCoverImage from "@/components/ReportCoverImage";
 import { useRelatorio, RelatorioResponse } from "@/hooks/useRelatorio";
 import { SensitivaItem, UltrasomItem } from "@/types/vibracao";
 
@@ -200,13 +201,12 @@ const Index = () => {
               <p className="text-sm mt-2 opacity-80">Nº {`${relatorio.id} ${relatorio.num_revisao ?? ""}`.trim()}</p>
             </div>
 
-            <div className="mb-8 flex justify-center items-center">
-              <img src="/logo-sensitiva.jpg" alt="Imagem de Manutenção Sensitiva" className="cover-image rounded-lg" style={{ width: "160px", height: "160px", objectFit: "cover" }} />
-            </div>
+            <ReportCoverImage
+              src="/alinhamento-cover.jpg"
+              alt="Imagem de Alinhamento a Laser"
+            />
 
-            {clienteData?.logo && <div className="mb-8">
-              <img src={clienteData.logo} alt={clienteData.nome} className="cover-logo h-20 w-auto mx-auto" />
-            </div>}
+            
 
             {clienteData && <div className="bg-secondary/30 rounded-lg p-4 mb-6 text-center">
                 <h3 className="font-semibold text-primary mb-2">Cliente / Unidade</h3>
@@ -221,6 +221,10 @@ const Index = () => {
               </div>
               
             </div>
+
+            {clienteData?.logo && <div className="mb-8">
+              <img src={clienteData.logo} alt={clienteData.nome} className="client-cover-logo h-40 w-auto mx-auto object-contain" />
+            </div>}
           </div>
 
           <ReportFooter />
@@ -237,13 +241,11 @@ const Index = () => {
 
           <div className="mb-8">
             <p className="text-sm text-muted-foreground">A/C:</p>
-            <p className="font-semibold">{clienteData?.pessoa_contato || "Departamento de Manutenção"}</p>
-            {clienteData?.departamento_contato && <p className="text-sm text-muted-foreground">{clienteData.departamento_contato}</p>}
             {clienteData && <div className="mt-2 text-sm">
-                <p className="font-medium">{clienteData.nome}</p>
-                <p className="text-muted-foreground">{clienteData.email}</p>
-                <p className="text-muted-foreground">{clienteData.telefone}</p>
+                <p className="text-muted-foreground">{clienteData.pessoa_contato}</p>
+                {/* <p className="text-muted-foreground">{clienteData.telefone}</p> */}
               </div>}
+              {clienteData?.departamento_contato && <p className="font-semibold">{clienteData.departamento_contato}</p>}
           </div>
 
           <div className="mb-8">
